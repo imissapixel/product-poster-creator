@@ -110,6 +110,16 @@ const MIN_DESCRIPTION_CHARS = 250;
 const MAX_DESCRIPTION_CHARS = 500;
 const COUNTER_THRESHOLD = 5;
 
+const sanitizeFilename = (input: string) => {
+  const normalized = input
+    .normalize('NFKD')
+    .replace(/[^\p{Letter}\p{Number}]+/gu, '-')
+    .replace(/^-+|-+$/g, '')
+    .toLowerCase();
+  const truncated = normalized.slice(0, 60).replace(/-+$/g, '');
+  return truncated || 'listing';
+};
+
 const Index = () => {
   const { t } = useLanguage();
   const { theme } = useTheme();
@@ -158,6 +168,7 @@ const Index = () => {
   const toastCopySuccess = t('toastCopySuccess');
   const toastCopyError = t('toastCopyError');
   const tooltipCopyToClipboard = t('tooltipCopyToClipboard');
+  const locationPlaceholderText = t('locationPlaceholder');
 
   useEffect(() => {
     if (typeof window === 'undefined') return;
@@ -358,6 +369,7 @@ const Index = () => {
         price,
         description: description.trim() || fallbackDescription,
         location: location.trim(),
+        locationPlaceholder: locationPlaceholderText,
         currencyPrefix: currency,
         freeLabel,
         fallbackDescription,
@@ -386,6 +398,7 @@ const Index = () => {
     toastGenerateError,
     photoAreaWidth,
     palette,
+    locationPlaceholderText,
   ]);
 
   useEffect(() => {
@@ -454,8 +467,11 @@ const Index = () => {
   const handleDownload = async () => {
     if (!generatedImage) return;
 
+    const listingTitle = title.trim() || fallbackTitle;
+    const filename = `${sanitizeFilename(listingTitle)}.jpg`;
+
     const link = document.createElement('a');
-    link.download = `listing-${Date.now()}.jpg`;
+    link.download = filename;
     link.href = generatedImage;
     link.click();
 
@@ -740,7 +756,7 @@ const Index = () => {
                 palette={palette}
               />
 
-              <div className="flex items-center gap-2">
+              <div className="flex items-stretch gap-2">
                 <Button
                   type="button"
                   onClick={handleDownload}
@@ -760,7 +776,7 @@ const Index = () => {
                       onClick={handleCopy}
                       disabled={!canDownload}
                       aria-label={tooltipCopyToClipboard}
-                      className="h-11 w-11 p-0"
+                      className="w-11 p-0 flex items-center justify-center"
                     >
                       <Copy className="h-4 w-4" />
                     </Button>

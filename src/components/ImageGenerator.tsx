@@ -9,6 +9,7 @@ interface GenerateListingImageProps {
   price: number;
   description: string;
   location: string;
+  locationPlaceholder: string;
   fallbackTitle: string;
   fallbackDescription: string;
   currencyPrefix: string;
@@ -23,6 +24,7 @@ export const generateListingImage = async ({
   price,
   description,
   location,
+  locationPlaceholder,
   fallbackTitle,
   fallbackDescription,
   currencyPrefix,
@@ -121,12 +123,12 @@ export const generateListingImage = async ({
   const textAreaX = clampedPhotoWidth + paddingX;
   const innerTextWidth = Math.max(textAreaWidth - paddingX * 2, 100);
 
-  const availableHeight = CANVAS_HEIGHT - paddingY * 2;
+  const availableCanvasHeight = CANVAS_HEIGHT - paddingY * 2;
 
   const titleText = title.trim() || fallbackTitle;
   const titleFit = fitTextBlock(ctx, titleText, {
     maxWidth: innerTextWidth,
-    maxHeight: availableHeight * 0.45,
+    maxHeight: availableCanvasHeight * 0.45,
     maxLines: 3,
     maxFontSize: 56,
     minFontSize: 28,
@@ -146,9 +148,12 @@ export const generateListingImage = async ({
   ctx.textAlign = 'right';
   ctx.fillText(priceLabel, clampedPhotoWidth + textAreaWidth - paddingX, priceBaseline);
 
-  const locationText = location.trim().slice(0, 34);
-  if (locationText.length > 0) {
-    const locationFit = fitTextBlock(ctx, locationText, {
+  const rawLocation = location.trim().slice(0, 34);
+  const hasLocation = rawLocation.length > 0;
+  const displayLocation = hasLocation ? rawLocation : locationPlaceholder;
+
+  if (displayLocation.length > 0) {
+    const locationFit = fitTextBlock(ctx, displayLocation, {
       maxWidth: innerTextWidth * 0.8,
       maxHeight: priceLineHeight * 1.5,
       maxLines: 1,
@@ -158,11 +163,14 @@ export const generateListingImage = async ({
       lineHeightMultiplier: 1.2,
     });
 
+    ctx.save();
+    ctx.globalAlpha = hasLocation ? 1 : 0.6;
     ctx.fillStyle = textMuted;
     ctx.textAlign = 'left';
     ctx.font = `italic 500 ${locationFit.fontSize}px "Inter", "Arial", sans-serif`;
     const locationBaseline = priceBaseline;
     ctx.fillText(locationFit.lines.join(' '), textAreaX, locationBaseline);
+    ctx.restore();
   }
 
   const titleStartY = priceBaseline + priceLineHeight * 0.4;
@@ -186,17 +194,47 @@ export const generateListingImage = async ({
   ctx.fillRect(textAreaX, dividerY, innerTextWidth, 1);
 
   const descriptionStartY = dividerY + 24;
+  const remainingHeightCanvas = Math.max(CANVAS_HEIGHT - paddingY - descriptionStartY, 0);
 
-  if (descriptionStartY < CANVAS_HEIGHT - paddingY) {
-    const descFit = fitTextBlock(ctx, descriptionText, {
+  if (remainingHeightCanvas > 0) {
+    const descriptionOptions = {
       maxWidth: innerTextWidth,
-      maxHeight: CANVAS_HEIGHT - paddingY - descriptionStartY,
+      maxHeight: remainingHeightCanvas,
       maxLines: 60,
-      maxFontSize: 38,
+      maxFontSize: 44,
       minFontSize: 16,
       fontWeight: '400',
       lineHeightMultiplier: 1.32,
-    });
+    } as const;
+
+    let descFit = fitTextBlock(ctx, descriptionText, descriptionOptions);
+
+    const blockHeightCanvas = descFit.lines.length * descFit.lineHeight;
+    if (blockHeightCanvas > 0) {
+      const fillRatio = blockHeightCanvas / remainingHeightCanvas;
+      const perLineCap = Math.floor(
+        (remainingHeightCanvas / Math.max(descFit.lines.length, 1)) /
+          descriptionOptions.lineHeightMultiplier
+      );
+      const dynamicCap = Math.max(
+        descriptionOptions.minFontSize,
+        Math.min(56, perLineCap || descriptionOptions.maxFontSize)
+      );
+
+      if (fillRatio < 0.65 && dynamicCap > descFit.fontSize) {
+        const desiredSize = Math.min(
+          dynamicCap,
+          Math.max(descFit.fontSize + 1, Math.floor(descFit.fontSize / Math.max(fillRatio, 0.15)))
+        );
+
+        if (desiredSize > descFit.fontSize) {
+          descFit = fitTextBlock(ctx, descriptionText, {
+            ...descriptionOptions,
+            maxFontSize: desiredSize,
+          });
+        }
+      }
+    }
 
     ctx.fillStyle = textMuted;
     ctx.textAlign = 'left';
