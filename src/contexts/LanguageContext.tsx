@@ -8,6 +8,8 @@ interface LanguageContextType {
   t: (key: string) => string;
 }
 
+const LANGUAGE_STORAGE_KEY = 'ppc-language';
+
 const translations = {
   en: {
     appTitle: 'Product Poster Creator',
@@ -107,12 +109,35 @@ const LanguageContext = createContext<LanguageContextType | undefined>(undefined
 
 export const LanguageProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [language, setLanguageState] = useState<Language>(() => {
-    const saved = localStorage.getItem('language');
-    return (saved === 'pt' ? 'pt' : 'en') as Language;
+    if (typeof window === 'undefined') {
+      return 'en';
+    }
+
+    try {
+      const stored = window.localStorage.getItem(LANGUAGE_STORAGE_KEY);
+      if (stored === 'pt' || stored === 'en') {
+        return stored;
+      }
+      window.localStorage.setItem(LANGUAGE_STORAGE_KEY, 'en');
+    } catch (error) {
+      console.warn('Unable to read stored language, defaulting to English.', error);
+    }
+
+    return 'en';
   });
 
   useEffect(() => {
-    localStorage.setItem('language', language);
+    if (typeof window === 'undefined') {
+      return;
+    }
+
+    try {
+      window.localStorage.setItem(LANGUAGE_STORAGE_KEY, language);
+    } catch (error) {
+      console.warn('Unable to persist language preference.', error);
+    }
+
+    document.documentElement.lang = language === 'pt' ? 'pt' : 'en';
   }, [language]);
 
   const t = (key: string): string => {

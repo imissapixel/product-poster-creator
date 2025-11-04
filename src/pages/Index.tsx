@@ -557,7 +557,7 @@ const Index = () => {
                           return normalized === '' ? '1' : normalized;
                         });
                       }}
-                      className="pl-16"
+                      className="pl-16 text-right"
                       aria-label={t('price')}
                     />
                   </div>
@@ -612,8 +612,13 @@ const Index = () => {
                 )}
 
               <div className="space-y-2">
-                <div className="flex items-center gap-2">
-                  <div className="flex-1 min-w-[9rem]">
+                <div className="flex flex-wrap items-center gap-2">
+                  <div
+                    className={cn(
+                      'flex-1 min-w-[9rem]',
+                      currency !== 'AED' && 'w-full'
+                    )}
+                  >
                     <Input
                       placeholder={t('locationPlaceholder')}
                       value={location}
@@ -622,72 +627,73 @@ const Index = () => {
                       aria-label={t('location')}
                     />
                   </div>
-                  {LOCATION_PRESETS.map((preset) => {
-                    const cityButton = (
-                      <Button
-                        type="button"
-                        variant="outline"
-                        size="sm"
-                        className="h-10 flex-shrink-0 px-4"
-                        onPointerDown={() => setLocation(preset.slice(0, LOCATION_MAX_CHARS))}
-                        onClick={() => setLocation(preset.slice(0, LOCATION_MAX_CHARS))}
-                      >
-                        {preset}
-                      </Button>
-                    );
-
-                    if (preset === 'Dubai') {
-                      return (
-                        <DropdownMenu key={preset}>
-                          <DropdownMenuTrigger asChild>{cityButton}</DropdownMenuTrigger>
-                          <DropdownMenuContent align="start" className="max-h-60 overflow-y-auto">
-                            {DUBAI_DISTRICTS.map((district) => {
-                              const label = stripCitySuffix(district, 'Dubai') || district;
-                              const formatted = `${label}, Dubai`;
-                              return (
-                                <DropdownMenuItem
-                                  key={district}
-                                  onSelect={(event) => {
-                                    event.preventDefault();
-                                    setLocation(formatted.slice(0, LOCATION_MAX_CHARS));
-                                  }}
-                                >
-                                  {label}
-                                </DropdownMenuItem>
-                              );
-                            })}
-                          </DropdownMenuContent>
-                        </DropdownMenu>
+                  {currency === 'AED' &&
+                    LOCATION_PRESETS.map((preset) => {
+                      const cityButton = (
+                        <Button
+                          type="button"
+                          variant="outline"
+                          size="sm"
+                          className="h-10 flex-shrink-0 px-4"
+                          onPointerDown={() => setLocation(preset.slice(0, LOCATION_MAX_CHARS))}
+                          onClick={() => setLocation(preset.slice(0, LOCATION_MAX_CHARS))}
+                        >
+                          {preset}
+                        </Button>
                       );
-                    }
 
-                    if (preset === 'Abu Dhabi') {
-                      return (
-                        <DropdownMenu key={preset}>
-                          <DropdownMenuTrigger asChild>{cityButton}</DropdownMenuTrigger>
-                          <DropdownMenuContent align="start" className="max-h-60 overflow-y-auto">
-                            {ABU_DHABI_DISTRICTS.map((district) => {
-                              const label = stripCitySuffix(district, 'Abu Dhabi') || district;
-                              const formatted = `${label}, Abu Dhabi`;
-                              return (
-                                <DropdownMenuItem
-                                  key={district}
-                                  onSelect={(event) => {
-                                    event.preventDefault();
-                                    setLocation(formatted.slice(0, LOCATION_MAX_CHARS));
-                                  }}
-                                >
-                                  {label}
-                                </DropdownMenuItem>
-                              );
-                            })}
-                          </DropdownMenuContent>
-                        </DropdownMenu>
-                      );
-                    }
+                      if (preset === 'Dubai') {
+                        return (
+                          <DropdownMenu key={preset}>
+                            <DropdownMenuTrigger asChild>{cityButton}</DropdownMenuTrigger>
+                            <DropdownMenuContent align="start" className="max-h-60 overflow-y-auto">
+                              {DUBAI_DISTRICTS.map((district) => {
+                                const label = stripCitySuffix(district, 'Dubai') || district;
+                                const formatted = `${label}, Dubai`;
+                                return (
+                                  <DropdownMenuItem
+                                    key={district}
+                                    onSelect={(event) => {
+                                      event.preventDefault();
+                                      setLocation(formatted.slice(0, LOCATION_MAX_CHARS));
+                                    }}
+                                  >
+                                    {label}
+                                  </DropdownMenuItem>
+                                );
+                              })}
+                            </DropdownMenuContent>
+                          </DropdownMenu>
+                        );
+                      }
 
-                    return null;
-                  })}
+                      if (preset === 'Abu Dhabi') {
+                        return (
+                          <DropdownMenu key={preset}>
+                            <DropdownMenuTrigger asChild>{cityButton}</DropdownMenuTrigger>
+                            <DropdownMenuContent align="start" className="max-h-60 overflow-y-auto">
+                              {ABU_DHABI_DISTRICTS.map((district) => {
+                                const label = stripCitySuffix(district, 'Abu Dhabi') || district;
+                                const formatted = `${label}, Abu Dhabi`;
+                                return (
+                                  <DropdownMenuItem
+                                    key={district}
+                                    onSelect={(event) => {
+                                      event.preventDefault();
+                                      setLocation(formatted.slice(0, LOCATION_MAX_CHARS));
+                                    }}
+                                  >
+                                    {label}
+                                  </DropdownMenuItem>
+                                );
+                              })}
+                            </DropdownMenuContent>
+                          </DropdownMenu>
+                        );
+                      }
+
+                      return null;
+                    })}
                 </div>
                 {LOCATION_MAX_CHARS - location.length <= COUNTER_THRESHOLD && (
                   <div className="flex items-center justify-end text-xs text-muted-foreground">
