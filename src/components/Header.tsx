@@ -11,6 +11,8 @@ export const Header = () => {
   const { language, setLanguage, t } = useLanguage();
   const resetForm = useResetForm();
 
+  const logoSrc = `${import.meta.env.BASE_URL}logo.png`;
+
   return (
     <header className="border-b border-border bg-card w-full">
       <div className="container mx-auto px-4 py-4 w-full">
@@ -18,7 +20,7 @@ export const Header = () => {
           <Tooltip>
             <TooltipTrigger asChild>
               <button type="button" onClick={resetForm} className="flex items-center gap-3 group">
-                <img src="/logo.png" alt="Product Poster Creator logo" className="h-10 w-10 flex-shrink-0 object-contain transition group-hover:scale-105" />
+                <img src={logoSrc} alt="Product Poster Creator logo" className="h-10 w-10 flex-shrink-0 object-contain transition group-hover:scale-105" />
                 <h1 className="text-lg font-bold text-foreground sm:text-xl md:text-2xl">
                   {t('appTitle')}
                 </h1>

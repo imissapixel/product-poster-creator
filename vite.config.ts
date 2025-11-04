@@ -4,6 +4,7 @@ import path from "path";
 
 // https://vitejs.dev/config/
 export default defineConfig(({ mode }) => ({
+  base: mode === "development" ? "/" : "/product-poster-creator/",
   server: {
     host: "::",
     port: 8080,
