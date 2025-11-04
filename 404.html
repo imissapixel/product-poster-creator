@@ -1,0 +1,27 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <title>Redirecting…</title>
+    <script>
+      (function () {
+        var repo = "/product-poster-creator";
+        var path = window.location.pathname;
+        if (path.startsWith(repo)) {
+          path = path.slice(repo.length);
+        }
+        var search = window.location.search;
+        var hash = window.location.hash;
+        try {
+          sessionStorage.setItem("gh_redirect", (path || "/") + search + hash);
+        } catch (error) {
+          console.warn("Unable to persist redirect path", error);
+        }
+        window.location.replace(repo + "/");
+      })();
+    </script>
+  </head>
+  <body>
+    Redirecting…
+  </body>
+</html>
