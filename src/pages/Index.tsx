@@ -778,28 +778,15 @@ const Index = () => {
         <div className="flex flex-col items-center gap-2">
           <p className="text-xs text-muted-foreground">{t('footerPrivacyNotice')}</p>
           <p className="text-xs text-muted-foreground">{t('footerOpenSourceNotice')}</p>
-          <div className="flex flex-col items-center gap-2">
-            <p className="text-xs text-muted-foreground">
-              {t('footerBuiltBy')}{' '}
-              <a
-                href="https://www.linkedin.com/in/fernandoxpereira"
-                target="_blank"
-                rel="noreferrer"
-                className="text-primary hover:text-primary/80 no-underline transition-transform duration-150 hover:-translate-y-0.5"
-              >
-                Fernando Pereira
-              </a>
-            </p>
-            <a
-              href="https://github.com/imissapixel/product-poster-creator"
-              target="_blank"
-              rel="noreferrer"
-              className="inline-flex items-center justify-center rounded-full bg-transparent text-muted-foreground transition-transform duration-150 hover:-translate-y-0.5 hover:text-primary"
-              aria-label="View source code on GitHub"
-            >
-              <Github className="h-4 w-4" />
-            </a>
-          </div>
+          <a
+            href="https://github.com/imissapixel/product-poster-creator"
+            target="_blank"
+            rel="noreferrer"
+            className="inline-flex items-center justify-center rounded-full bg-transparent text-muted-foreground transition-transform duration-150 hover:-translate-y-0.5 hover:text-primary"
+            aria-label="View source code on GitHub"
+          >
+            <Github className="h-4 w-4" />
+          </a>
         </div>
       </footer>
     </div>
