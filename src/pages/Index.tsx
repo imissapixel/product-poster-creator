@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { Copy, Download, Github, ImageIcon, RotateCcw, ChevronDown } from 'lucide-react';
+import { Copy, Download, Github, ImageIcon, RotateCcw, ChevronDown, Loader2, Sparkles } from 'lucide-react';
 import { toast } from 'sonner';
 import { Header } from '@/components/Header';
 import { ImageUpload } from '@/components/ImageUpload';
@@ -18,6 +18,8 @@ import {
 import { useLanguage } from '@/contexts/LanguageContext';
 import { useTheme } from '@/contexts/ThemeContext';
 import { useResetContext } from '@/contexts/ResetContext';
+import { useGeminiConfig } from '@/contexts/GeminiContext';
+import { useGeminiSuggestions } from '@/hooks/useGeminiSuggestions';
 import { generateListingImage } from '@/components/ImageGenerator';
 import { computeOptimalLayout } from '@/lib/layoutSolver';
 import { CANVAS_HEIGHT, CANVAS_WIDTH, MIN_TEXT_RATIO } from '@/lib/constants';
@@ -121,9 +123,11 @@ const sanitizeFilename = (input: string) => {
 };
 
 const Index = () => {
-  const { t } = useLanguage();
+  const { t, language } = useLanguage();
   const { theme } = useTheme();
   const { setResetHandler } = useResetContext();
+  const { isConfigured: isGeminiConfigured } = useGeminiConfig();
+  const { suggestTitle, suggestDescription } = useGeminiSuggestions();
   const [images, setImages] = useState<File[]>([]);
   const [frames, setFrames] = useState<PhotoFrame[]>([]);
   const [photoAreaWidth, setPhotoAreaWidth] = useState<number>(DEFAULT_PHOTO_WIDTH);
@@ -139,6 +143,8 @@ const Index = () => {
   const [palette, setPalette] = useState<ThemePalette>(() => readThemePalette());
   const previousUrlsRef = useRef<string[]>([]);
   const [resetKey, setResetKey] = useState(0);
+  const [isImprovingTitle, setIsImprovingTitle] = useState(false);
+  const [isImprovingDescription, setIsImprovingDescription] = useState(false);
 
   const descriptionMaxLength = useMemo(() => {
     const clampedPhotoWidth = Math.min(photoAreaWidth, CANVAS_WIDTH * (2 / 3));
@@ -158,6 +164,113 @@ const Index = () => {
     if (parsed < 0) return 0;
     return parsed;
   }, [priceInput]);
+
+  const localeLabel = language === 'pt' ? 'European Portuguese' : 'English';
+
+  const aiAttachments = useMemo(
+    () =>
+      frames.map((frame) => ({
+        file: frame.file,
+        url: frame.src,
+      })),
+    [frames]
+  );
+
+  const canImproveTitle = isGeminiConfigured && aiAttachments.length > 0;
+  const canImproveDescription = isGeminiConfigured && (aiAttachments.length > 0 || title.trim().length > 0);
+
+  const handleImproveTitle = useCallback(async () => {
+    if (!isGeminiConfigured) {
+      toast.warning(t('toastGeminiMissingKey'));
+      return;
+    }
+
+    if (aiAttachments.length === 0) {
+      toast.warning(t('toastGeminiTitleNeedsImage'));
+      return;
+    }
+
+    try {
+      setIsImprovingTitle(true);
+      const suggestion = await suggestTitle({
+        locale: localeLabel,
+        currentTitle: title.trim(),
+        currentDescription: description.trim(),
+        description: description.trim(),
+        location,
+        attachments: aiAttachments,
+        maxLength: TITLE_MAX_CHARS,
+      });
+
+      if (suggestion) {
+        setTitle(suggestion);
+        toast.success(t('toastGeminiTitleSuccess'));
+      }
+    } catch (error) {
+      console.error(error);
+      toast.error(t('toastGeminiError'));
+    } finally {
+      setIsImprovingTitle(false);
+    }
+  }, [
+    description,
+    aiAttachments,
+    isGeminiConfigured,
+    localeLabel,
+    location,
+    suggestTitle,
+    t,
+    title,
+  ]);
+
+  const handleImproveDescription = useCallback(async () => {
+    if (!isGeminiConfigured) {
+      toast.warning(t('toastGeminiMissingKey'));
+      return;
+    }
+
+    if (aiAttachments.length === 0 && title.trim().length === 0) {
+      toast.warning(t('toastGeminiDescriptionNeedsContext'));
+      return;
+    }
+
+    try {
+      setIsImprovingDescription(true);
+      const suggestion = await suggestDescription({
+        locale: localeLabel,
+        currentTitle: title.trim(),
+        currentDescription: description.trim(),
+        description: description.trim(),
+        location,
+        attachments: aiAttachments,
+        maxLength: descriptionMaxLength,
+        minLength: MIN_DESCRIPTION_CHARS,
+      });
+
+      if (suggestion) {
+        setDescription(suggestion);
+        toast.success(t('toastGeminiDescriptionSuccess'));
+      }
+    } catch (error) {
+      console.error(error);
+      toast.error(t('toastGeminiError'));
+    } finally {
+      setIsImprovingDescription(false);
+    }
+  }, [
+    description,
+    descriptionMaxLength,
+    aiAttachments,
+    isGeminiConfigured,
+    localeLabel,
+    location,
+    suggestDescription,
+    t,
+    title,
+  ]);
+
+  const isTitleActionBusy = isImprovingTitle;
+  const isDescriptionActionBusy = isImprovingDescription;
 
   const fallbackTitle = t('previewTitleFallback');
   const fallbackDescription = t('previewDescriptionFallback');
@@ -197,6 +310,8 @@ const Index = () => {
     setIsGenerating(false);
     setIsLayoutPending(false);
     setHasCustomLayout(false);
+    setIsImprovingTitle(false);
+    setIsImprovingDescription(false);
     setPalette(readThemePalette());
     setResetKey((prev) => prev + 1);
   }, [setResetKey]);
@@ -593,13 +708,38 @@ const Index = () => {
               </div>
 
               <div className="space-y-2">
-                <Input
-                  placeholder={t('titlePlaceholder')}
-                  value={title}
-                  onChange={(e) => setTitle(e.target.value.slice(0, TITLE_MAX_CHARS))}
-                  maxLength={TITLE_MAX_CHARS}
-                  aria-label={t('title')}
-                />
+                <div className="relative">
+                  <Input
+                    placeholder={t('titlePlaceholder')}
+                    value={title}
+                    onChange={(e) => setTitle(e.target.value.slice(0, TITLE_MAX_CHARS))}
+                    maxLength={TITLE_MAX_CHARS}
+                    aria-label={t('title')}
+                    className={cn(isGeminiConfigured ? 'pr-12' : undefined)}
+                  />
+                  {isGeminiConfigured && (
+                    <Tooltip>
+                      <TooltipTrigger asChild>
+                        <Button
+                          type="button"
+                          variant="ghost"
+                          size="icon"
+                          onClick={handleImproveTitle}
+                          disabled={isTitleActionBusy || !canImproveTitle}
+                          className="absolute right-2 top-1/2 -translate-y-1/2 h-8 w-8"
+                          aria-label={t('tooltipImproveTitle')}
+                        >
+                          {isTitleActionBusy ? (
+                            <Loader2 className="h-4 w-4 animate-spin" />
+                          ) : (
+                            <Sparkles className="h-4 w-4" />
+                          )}
+                        </Button>
+                      </TooltipTrigger>
+                      <TooltipContent>{t('tooltipImproveTitle')}</TooltipContent>
+                    </Tooltip>
+                  )}
+                </div>
                 {TITLE_MAX_CHARS - title.length <= COUNTER_THRESHOLD && (
                   <div className="flex items-center justify-end text-xs text-muted-foreground">
                     <span>
@@ -610,15 +750,39 @@ const Index = () => {
               </div>
 
               <div className="space-y-2">
-                <Textarea
-                  placeholder={t('descriptionPlaceholder')}
-                  value={description}
-                  onChange={(e) => setDescription(e.target.value.slice(0, descriptionMaxLength))}
-                  maxLength={descriptionMaxLength}
-                  rows={4}
-                  className="resize-none"
-                  aria-label={t('description')}
-                />
+                <div className="relative">
+                  <Textarea
+                    placeholder={t('descriptionPlaceholder')}
+                    value={description}
+                    onChange={(e) => setDescription(e.target.value.slice(0, descriptionMaxLength))}
+                    maxLength={descriptionMaxLength}
+                    rows={4}
+                    className={cn('resize-none', isGeminiConfigured && 'pr-12')}
+                    aria-label={t('description')}
+                  />
+                  {isGeminiConfigured && (
+                    <Tooltip>
+                      <TooltipTrigger asChild>
+                        <Button
+                          type="button"
+                          variant="ghost"
+                          size="icon"
+                          onClick={handleImproveDescription}
+                          disabled={isDescriptionActionBusy || !canImproveDescription}
+                          className="absolute right-2 top-2 h-8 w-8"
+                          aria-label={t('tooltipImproveDescription')}
+                        >
+                          {isDescriptionActionBusy ? (
+                            <Loader2 className="h-4 w-4 animate-spin" />
+                          ) : (
+                            <Sparkles className="h-4 w-4" />
+                          )}
+                        </Button>
+                      </TooltipTrigger>
+                      <TooltipContent>{t('tooltipImproveDescription')}</TooltipContent>
+                    </Tooltip>
+                  )}
+                </div>
                 {descriptionMaxLength - description.length <= COUNTER_THRESHOLD && (
                   <div className="flex items-center justify-end text-xs text-muted-foreground">
                     <span>
@@ -626,6 +790,7 @@ const Index = () => {
                     </span>
                   </div>
                 )}
+              </div>
 
               <div className="space-y-2">
                 <div className="flex flex-wrap items-center gap-2">
@@ -719,8 +884,7 @@ const Index = () => {
                   </div>
                 )}
               </div>
-            </div>
-          </CardContent>
+            </CardContent>
         </Card>
 
           <Card>
@@ -792,7 +956,9 @@ const Index = () => {
       </main>
       <footer className="py-4 text-center">
         <div className="flex flex-col items-center gap-2">
-          <p className="text-xs text-muted-foreground">{t('footerPrivacyNotice')}</p>
+          <p className="text-xs text-muted-foreground">
+            {isGeminiConfigured ? t('footerPrivacyNoticeWithAI') : t('footerPrivacyNotice')}
+          </p>
           <p className="text-xs text-muted-foreground">{t('footerOpenSourceNotice')}</p>
           <a
             href="https://github.com/imissapixel/product-poster-creator"
