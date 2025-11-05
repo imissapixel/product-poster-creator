@@ -490,7 +490,6 @@ const Index = () => {
         price,
         description: description.trim() || fallbackDescription,
         location: location.trim(),
-        locationPlaceholder: locationPlaceholderText,
         currencyPrefix: currency,
         freeLabel,
         fallbackDescription,
@@ -519,7 +518,6 @@ const Index = () => {
     toastGenerateError,
     photoAreaWidth,
     palette,
-    locationPlaceholderText,
   ]);
 
   useEffect(() => {

@@ -9,7 +9,6 @@ interface GenerateListingImageProps {
   price: number;
   description: string;
   location: string;
-  locationPlaceholder: string;
   fallbackTitle: string;
   fallbackDescription: string;
   currencyPrefix: string;
@@ -24,7 +23,6 @@ export const generateListingImage = async ({
   price,
   description,
   location,
-  locationPlaceholder,
   fallbackTitle,
   fallbackDescription,
   currencyPrefix,
@@ -150,10 +148,8 @@ export const generateListingImage = async ({
 
   const rawLocation = location.trim().slice(0, 34);
   const hasLocation = rawLocation.length > 0;
-  const displayLocation = hasLocation ? rawLocation : locationPlaceholder;
-
-  if (displayLocation.length > 0) {
-    const locationFit = fitTextBlock(ctx, displayLocation, {
+  if (hasLocation) {
+    const locationFit = fitTextBlock(ctx, rawLocation, {
       maxWidth: innerTextWidth * 0.8,
       maxHeight: priceLineHeight * 1.5,
       maxLines: 1,
@@ -164,7 +160,6 @@ export const generateListingImage = async ({
     });
 
     ctx.save();
-    ctx.globalAlpha = hasLocation ? 1 : 0.6;
     ctx.fillStyle = textMuted;
     ctx.textAlign = 'left';
     ctx.font = `italic 500 ${locationFit.fontSize}px "Inter", "Arial", sans-serif`;
