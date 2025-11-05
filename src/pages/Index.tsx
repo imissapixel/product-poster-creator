@@ -7,6 +7,7 @@ import { ListingPreview } from '@/components/ListingPreview';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
+import { Slider } from '@/components/ui/slider';
 import { Textarea } from '@/components/ui/textarea';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
 import {
@@ -62,10 +63,10 @@ const DEFAULT_PHOTO_WIDTH = CANVAS_WIDTH / 2;
 
 const CURRENCY_OPTIONS = ['AED', 'USD', 'EUR'] as const;
 type CurrencyCode = (typeof CURRENCY_OPTIONS)[number];
-const CURRENCY_PRESETS: Record<CurrencyCode, readonly number[]> = {
-  AED: [25, 50, 100, 200, 500, 1000],
-  USD: [5, 10, 20, 50, 100, 200],
-  EUR: [5, 10, 20, 50, 100, 200],
+const CURRENCY_MAX_VALUE: Record<CurrencyCode, number> = {
+  AED: 1000,
+  USD: 200,
+  EUR: 200,
 };
 const LOCATION_PRESETS = ['Dubai', 'Abu Dhabi'] as const;
 const DUBAI_DISTRICTS = [
@@ -122,6 +123,12 @@ const sanitizeFilename = (input: string) => {
   return truncated || 'listing';
 };
 
+const clampPriceValue = (value: number, currency: CurrencyCode) => {
+  const max = CURRENCY_MAX_VALUE[currency];
+  if (Number.isNaN(value)) return 0;
+  return Math.min(Math.max(Math.round(value), 0), max);
+};
+
 const Index = () => {
   const { t, language } = useLanguage();
   const { theme } = useTheme();
@@ -132,7 +139,7 @@ const Index = () => {
   const [frames, setFrames] = useState<PhotoFrame[]>([]);
   const [photoAreaWidth, setPhotoAreaWidth] = useState<number>(DEFAULT_PHOTO_WIDTH);
   const [title, setTitle] = useState('');
-  const [priceInput, setPriceInput] = useState('1');
+  const [priceInput, setPriceInput] = useState('0');
   const [currency, setCurrency] = useState<CurrencyCode>('AED');
   const [description, setDescription] = useState('');
   const [location, setLocation] = useState('');
@@ -160,10 +167,8 @@ const Index = () => {
 
   const price = useMemo(() => {
     const parsed = parseInt(priceInput, 10);
-    if (Number.isNaN(parsed)) return 1;
-    if (parsed < 0) return 0;
-    return parsed;
-  }, [priceInput]);
+    return clampPriceValue(Number.isNaN(parsed) ? 0 : parsed, currency);
+  }, [priceInput, currency]);
 
   const localeLabel = language === 'pt' ? 'European Portuguese' : 'English';
 
@@ -178,6 +183,7 @@ const Index = () => {
 
   const canImproveTitle = isGeminiConfigured && aiAttachments.length > 0;
   const canImproveDescription = isGeminiConfigured && (aiAttachments.length > 0 || title.trim().length > 0);
+  const maxCurrencyValue = CURRENCY_MAX_VALUE[currency];
 
   const handleImproveTitle = useCallback(async () => {
     if (!isGeminiConfigured) {
@@ -643,9 +649,9 @@ const Index = () => {
             <CardContent className="space-y-6">
               <ImageUpload key={resetKey} images={images} onImagesChange={setImages} />
 
-              <div className="space-y-2">
-                <div className="flex flex-wrap items-center gap-3">
-                  <div className="relative min-w-[7.5rem] flex-1 sm:flex-none sm:w-40">
+              <div className="space-y-3">
+                <div className="flex flex-wrap items-center gap-4">
+                  <div className="relative w-[7.5rem] shrink-0 sm:w-[8.5rem]">
                     <DropdownMenu>
                       <DropdownMenuTrigger asChild>
                         <Button
@@ -666,6 +672,10 @@ const Index = () => {
                             onSelect={(event) => {
                               event.preventDefault();
                               setCurrency(option);
+                              setPriceInput((prev) => {
+                                const parsed = parseInt(prev, 10);
+                                return String(clampPriceValue(parsed, option));
+                              });
                             }}
                           >
                             {option}
@@ -684,26 +694,30 @@ const Index = () => {
                       }}
                       onBlur={() => {
                         setPriceInput((prev) => {
-                          const normalized = prev.slice(0, 8);
-                          return normalized === '' ? '1' : normalized;
+                          if (prev === '') return '0';
+                          const parsed = parseInt(prev, 10);
+                          return String(clampPriceValue(parsed, currency));
                         });
                       }}
-                      className="pl-16 text-right"
+                      className="pl-16 pr-2 text-right"
                       aria-label={t('price')}
                     />
                   </div>
-                  {CURRENCY_PRESETS[currency].map((preset) => (
-                    <Button
-                      key={`${currency}-${preset}`}
-                      type="button"
-                      variant="outline"
-                      size="sm"
-                      onClick={() => setPriceInput(String(preset).slice(0, 8))}
-                      className="flex-1 min-w-[4.75rem] h-10"
-                    >
-                      {currency} {preset}
-                    </Button>
-                  ))}
+                  <div className="flex min-w-[10rem] flex-1 flex-col gap-2">
+                    <Slider
+                      value={[price]}
+                      min={0}
+                      max={maxCurrencyValue}
+                      step={currency === 'AED' ? 5 : 1}
+                      showTooltip
+                      tooltipContent={(value) => `${currency} ${formatNumberWithCommas(value)}`}
+                      onValueChange={(values) => {
+                        const [next] = values;
+                        setPriceInput(String(clampPriceValue(next ?? 0, currency)));
+                      }}
+                      aria-label={t('price')}
+                    />
+                  </div>
                 </div>
               </div>
 

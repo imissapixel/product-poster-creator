@@ -51,12 +51,20 @@ export const Header = () => {
   return (
     <header className="border-b border-border bg-card w-full">
       <div className="container mx-auto px-4 py-4 w-full">
-        <div className="flex items-center justify-between">
+        <div className="flex items-center justify-between gap-2 sm:gap-3">
           <Tooltip>
             <TooltipTrigger asChild>
-              <button type="button" onClick={resetForm} className="flex items-center gap-3 group">
-                <img src={logoSrc} alt="Product Poster Creator logo" className="h-10 w-10 flex-shrink-0 object-contain transition group-hover:scale-105" />
-                <h1 className="text-lg font-bold text-foreground sm:text-xl md:text-2xl">
+              <button
+                type="button"
+                onClick={resetForm}
+                className="group flex min-w-0 flex-1 items-center gap-2 text-left sm:gap-3"
+              >
+                <img
+                  src={logoSrc}
+                  alt="Product Poster Creator logo"
+                  className="h-9 w-9 flex-shrink-0 object-contain transition group-hover:scale-105 sm:h-10 sm:w-10"
+                />
+                <h1 className="truncate text-left text-[clamp(0.95rem,4.2vw,1.4rem)] font-bold leading-tight text-foreground max-[400px]:text-[clamp(0.82rem,4vw,1.2rem)] sm:text-xl md:text-2xl">
                   {t('appTitle')}
                 </h1>
               </button>
@@ -64,7 +72,7 @@ export const Header = () => {
             <TooltipContent>{t('tooltipClearInputs')}</TooltipContent>
           </Tooltip>
           
-          <div className="flex items-center gap-2">
+          <div className="flex flex-shrink-0 items-center gap-2">
             <Dialog open={isDialogOpen} onOpenChange={setDialogOpen}>
               <Tooltip>
                 <TooltipTrigger asChild>
