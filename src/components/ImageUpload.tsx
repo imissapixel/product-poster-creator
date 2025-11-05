@@ -1,4 +1,4 @@
-import { useRef, useState } from 'react';
+import { useMemo, useRef, useState } from 'react';
 import { Upload, X } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { useLanguage } from '@/contexts/LanguageContext';
@@ -12,6 +12,43 @@ export const ImageUpload = ({ images, onImagesChange }: ImageUploadProps) => {
   const fileInputRef = useRef<HTMLInputElement>(null);
   const { t } = useLanguage();
   const [isDragging, setIsDragging] = useState(false);
+
+  const thumbnailLayout = useMemo(() => {
+    const count = images.length;
+
+    if (count === 0) {
+      return {
+        size: 'min(12rem, 70vw)',
+        gap: 12,
+        padding: '0.75rem',
+      };
+    }
+
+    if (count === 1) {
+      return {
+        size: 'min(12rem, 70vw)',
+        gap: 12,
+        padding: '0.75rem',
+      };
+    }
+
+    if (count === 2) {
+      return {
+        size: 'min(9rem, calc((100% - 12px)/2), 45vw)',
+        gap: 12,
+        padding: '0.75rem',
+      };
+    }
+
+    const gap = 8;
+    const maxSize = count === 3 ? '7rem' : '6rem';
+
+    return {
+      size: `min(${maxSize}, calc((100% - ${(count - 1) * gap}px) / ${count}), 26vw)`,
+      gap,
+      padding: '0.5rem',
+    };
+  }, [images.length]);
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const files = Array.from(e.target.files || []);
@@ -59,11 +96,21 @@ export const ImageUpload = ({ images, onImagesChange }: ImageUploadProps) => {
         }`}
       >
         {images.length > 0 ? (
-          <div className="flex w-full flex-nowrap items-center justify-center gap-3 p-[5px] sm:p-3">
+          <div
+            className="flex w-full flex-wrap items-center justify-center"
+            style={{
+              gap: `${thumbnailLayout.gap}px`,
+              padding: thumbnailLayout.padding,
+            }}
+          >
             {images.map((file, index) => (
               <div
                 key={index}
-                className="relative flex aspect-square w-[clamp(2.5rem,16vw,8rem)] items-center justify-center overflow-hidden rounded-lg bg-muted shadow-sm"
+                className="relative flex aspect-square items-center justify-center overflow-hidden rounded-lg bg-muted shadow-sm"
+                style={{
+                  width: thumbnailLayout.size,
+                  height: thumbnailLayout.size,
+                }}
               >
                 <img
                   src={URL.createObjectURL(file)}
